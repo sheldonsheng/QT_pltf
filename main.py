@@ -5,14 +5,23 @@ import matplotlib.pyplot as plt
 import tushare as ts
 import dateutil
 import datetime
+import rqdatac as rq
+from rqdatac import *
+
+
+rq.init('15821345316', '19890915sxy')
+# df = get_trading_dates(start_date='1990-01-01', end_date='2022-01-22')
+# df = pd.DataFrame(df)
+# df.to_csv('trade_cal.csv')
+
 
 pro = ts.pro_api('7978c1192b900af6a5a83a9df017d364bc76db64ddda2f2548e7d3c0')
-trade_cal = pd.read_csv('trade_calendar.csv')
+trade_cal = pd.read_csv('trade_cal.csv')
 
 
 CASH = 100000
 START_DATE = '2016-01-29'
-END_DATE = '2018-01-21'
+END_DATE = '2016-09-21'
 
 
 class Context:
@@ -24,7 +33,7 @@ class Context:
         self.benchmark = None
         self.date_range = trade_cal[(trade_cal['calendarDate'] >= start_date) & \
                                     (trade_cal['calendarDate'] <= end_date)]['calendarDate'].values
-        self.dt = dateutil.parser.parse(start_date)  #todo: modified to a exchange date after start_date
+        self.dt = None
 
 
 context = Context(CASH, START_DATE, END_DATE)
@@ -112,6 +121,7 @@ def order_value(security, value):
     amount = value / today_data['open'].squeeze()
     _order(today_data, security, amount)
 
+
 def order_target_value(security, value):
     today_data = get_today_data(security)
     if value < 0:
@@ -123,17 +133,34 @@ def order_target_value(security, value):
     order_value(security, delta_value)
 
 
-#----------------TEST------------------------
-order_target_value('601318', 5000)
-print(context.positions)
-print(context.positions.get('601318'))
-print(context.cash)
-#
-# df = pd.DataFrame([1])
-# print(df)
-# print(df.get(0))
-#
-# dic = {'a':[1,2,3]}
-# print(dic.get('a'))
-# This is a test for github
+def run():
+    plt_df = pd.DataFrame(index=pd.to_datetime(context.date_range), columns=['value'])
+    initialize(context)
+    last_price = {}
+    for dt in context.date_range:
+        context.dt = dateutil.parser.parse(dt)
+        handle_data(context)
+        value = context.cash
+        for stock in context.positions:
+            today_data = get_today_data(stock)
+            if len(today_data) == 0:
+                p = last_price[stock]
+                print(last_price)
+            else:
+                p = today_data(stock)['open']
+                print(last_price)
+            value += p * context.positions[stock]
+        plt_df.loc[dt, 'value'] = value
+    print(plt_df)
+
+
+def initialize(context):
+    pass
+
+
+def handle_data(context):
+    order('601318', 100)
+
+
+run()
 
