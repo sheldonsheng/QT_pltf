@@ -17,11 +17,13 @@ rq.init('15821345316', '19890915sxy')
 
 pro = ts.pro_api('7978c1192b900af6a5a83a9df017d364bc76db64ddda2f2548e7d3c0')
 trade_cal = pd.read_csv('trade_cal.csv')
+# df = pro.daily(ts_code='601318.SH', start_date='1990-12-26', end_date='2021-01-22')
+# df.to_csv('601318.csv')
 
 
 CASH = 100000
-START_DATE = '2016-01-29'
-END_DATE = '2016-09-21'
+START_DATE = '2016-01-07'
+END_DATE = '2016-01-31'
 
 
 class Context:
@@ -58,7 +60,7 @@ def attribute_daterange_history(security, start_date, end_date, fields=('open', 
         df = pd.read_csv(f, index_col='trade_date', parse_dates=['trade_date']).loc[start_date:end_date, :]
     except FileNotFoundError:
         df = pro.daily(ts_code=security + '.SH', start_date='start_date', end_date='end_date')
-
+        # df.to_csv(security + '.csv')
     return df[list(fields)]
 
 
@@ -157,6 +159,8 @@ def run():
 def initialize(context):
     pass
 
+
+attribute_daterange_history('601318', '1990-01-01', '2021-01-22')
 
 def handle_data(context):
     order('601318', 100)
