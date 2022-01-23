@@ -17,13 +17,13 @@ rq.init('15821345316', '19890915sxy')
 
 pro = ts.pro_api('7978c1192b900af6a5a83a9df017d364bc76db64ddda2f2548e7d3c0')
 trade_cal = pd.read_csv('trade_cal.csv')
-# df = pro.daily(ts_code='601318.SH', start_date='1990-12-26', end_date='2021-01-22')
-# df.to_csv('601318.csv')
+df = pro.daily(ts_code='601318.SH', start_date='1990-12-26', end_date='2021-01-22')
+df.to_csv('601318.csv')
 
 
 CASH = 100000
-START_DATE = '2016-01-07'
-END_DATE = '2016-01-31'
+START_DATE = '2014-01-01' #'2014-01-01'
+END_DATE = '2017-01-01' #'2017-01-01'
 
 
 class Context:
@@ -47,6 +47,8 @@ class G:
 
 g = G()
 
+def set_benchmark(security):
+    context.benchmark = security
 
 def attribute_history(security, count, fields=('open', 'close', 'high', 'low', 'vol')):
     end_date = (context.dt - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
@@ -60,7 +62,6 @@ def attribute_daterange_history(security, start_date, end_date, fields=('open', 
         df = pd.read_csv(f, index_col='trade_date', parse_dates=['trade_date']).loc[start_date:end_date, :]
     except FileNotFoundError:
         df = pro.daily(ts_code=security + '.SH', start_date='start_date', end_date='end_date')
-        # df.to_csv(security + '.csv')
     return df[list(fields)]
 
 
@@ -70,7 +71,8 @@ def get_today_data(security):
         f = open(security + '.csv', 'r')
         data = pd.read_csv(f, index_col='trade_date', parse_dates=['trade_date']).loc[today, :]
     except FileNotFoundError:
-        data = pro.daily(ts_code=security + '.SH', start_date=today, end_date=today)
+        pro = ts.pro_api('7978c1192b900af6a5a83a9df017d364bc76db64ddda2f2548e7d3c0')
+        data = pro.daily(ts_code=security + '.SH', start_date=today, end_date=today)  #todo:it seems that the platform does not support high frequency data fetching
     except KeyError: #找不到这个东西
         data = pd.Series()
     return data
@@ -78,6 +80,8 @@ def get_today_data(security):
 
 def _order(today_data, security, amount):
     p = today_data['open'].squeeze()
+    print(p)
+    print(today_data)
     if len(today_data) == 0:
         print("今日停牌")
         return
@@ -90,9 +94,10 @@ def _order(today_data, security, amount):
         if amount != -context.positions.get(security, 0):
             amount = int(amount / 100) * 100
             print("不是100的倍数，已调整为%d" % amount)
-        if context.positions.get(security, 0) < -amount:
-            amount = -context.positions.get(security, 0)
-            print("超过现有持仓，已调整为%d" % amount)
+
+    if context.positions.get(security, 0) < -amount:
+        amount = -context.positions.get(security, 0)
+        print("超过现有持仓，已调整为%d" % amount)
 
     context.positions[security] = context.positions.get(security, 0) + amount #更新仓位信息
 
@@ -137,6 +142,7 @@ def order_target_value(security, value):
 
 def run():
     plt_df = pd.DataFrame(index=pd.to_datetime(context.date_range), columns=['value'])
+    init_value = context.cash
     initialize(context)
     last_price = {}
     for dt in context.date_range:
@@ -147,24 +153,39 @@ def run():
             today_data = get_today_data(stock)
             if len(today_data) == 0:
                 p = last_price[stock]
-                print(last_price)
             else:
-                p = today_data(stock)['open']
-                print(last_price)
+                p = today_data['open'].squeeze()
+                last_price[stock] = p
             value += p * context.positions[stock]
         plt_df.loc[dt, 'value'] = value
-    print(plt_df)
+    plt_df['ratio'] = (plt_df['value'] - init_value) / init_value
+
+    bm_df = attribute_daterange_history(context.benchmark, context.start_date, context.end_date)
+    print(bm_df)
+    bm_init = bm_df['open'][0]
+    print(bm_init)
+    plt_df['benchmark_ratio'] = (bm_df['open'][0] - bm_init) / bm_init #todo: to investigate[0]
+
+    plt_df[['ratio', 'benchmark_ratio']].plot()
+    plt.show()
 
 
 def initialize(context):
-    pass
+    set_benchmark('601318')
+    g.p1 = 5
+    g.p2 = 60
+    g.security = '601318'
 
-
-attribute_daterange_history('601318', '1990-01-01', '2021-01-22')
 
 def handle_data(context):
-    order('601318', 100)
+    hist = attribute_history(g.security, g.p2)
+    ma5 = hist['close'][-g.p1:].mean()
+    ma60 = hist['close'].mean()
+
+    if ma5 > ma60 and g.security not in context.positions:
+        order_value(g.security, context.cash)
+    elif ma5 < ma60 and g.security in context.positions:
+        order_target(g.security, 0)
 
 
 run()
-
