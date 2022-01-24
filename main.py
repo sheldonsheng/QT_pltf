@@ -164,7 +164,7 @@ def run():
     print(bm_df)
     bm_init = bm_df['open'][0]
     print(bm_init)
-    plt_df['benchmark_ratio'] = (bm_df['open'][0] - bm_init) / bm_init #todo: to investigate[0]
+    plt_df['benchmark_ratio'] = (bm_df['open'] - bm_init) / bm_init #todo: to investigate[0]
 
     plt_df[['ratio', 'benchmark_ratio']].plot()
     plt.show()
