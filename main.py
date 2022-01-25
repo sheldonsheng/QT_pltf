@@ -22,8 +22,8 @@ df.to_csv('601318.csv')
 
 
 CASH = 100000
-START_DATE = '2014-01-01' #'2014-01-01'
-END_DATE = '2017-01-01' #'2017-01-01'
+START_DATE = '2014-01-01'
+END_DATE = '2017-01-01'
 
 
 class Context:
@@ -80,8 +80,6 @@ def get_today_data(security):
 
 def _order(today_data, security, amount):
     p = today_data['open'].squeeze()
-    print(p)
-    print(today_data)
     if len(today_data) == 0:
         print("今日停牌")
         return
@@ -161,13 +159,11 @@ def run():
     plt_df['ratio'] = (plt_df['value'] - init_value) / init_value
 
     bm_df = attribute_daterange_history(context.benchmark, context.start_date, context.end_date)
-    print(bm_df)
     bm_init = bm_df['open'][0]
-    print(bm_init)
-    plt_df['benchmark_ratio'] = (bm_df['open'] - bm_init) / bm_init #todo: to investigate[0]
-
+    plt_df['benchmark_ratio'] = (bm_df['open'] - bm_init) / bm_init
     plt_df[['ratio', 'benchmark_ratio']].plot()
     plt.show()
+
 
 
 def initialize(context):
@@ -179,13 +175,31 @@ def initialize(context):
 
 def handle_data(context):
     hist = attribute_history(g.security, g.p2)
-    ma5 = hist['close'][-g.p1:].mean()
+
+    ma5 = hist['close'][:g.p1].mean()
     ma60 = hist['close'].mean()
+
+    print('last 5 days:\n')
+    print(hist['close'][:g.p1])
+    print('last 60 days:\n')
+    print(hist['close'])
+    print('date:' + str(context.dt))
+    print('ma5=' + str(ma5))
+    print('ma60=' + str(ma60))
+    print('------------------')
 
     if ma5 > ma60 and g.security not in context.positions:
         order_value(g.security, context.cash)
+        print(context.dt)
+        print(context.cash)
+        print(context.positions)
+        print('------------------')
     elif ma5 < ma60 and g.security in context.positions:
         order_target(g.security, 0)
+        print(context.dt)
+        print(context.cash)
+        print(context.positions)
+        print('------------------')
 
 
 run()
