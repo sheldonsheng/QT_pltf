@@ -174,8 +174,7 @@ def initialize(context):
 
 
 def handle_data(context):
-    hist = attribute_history(g.security, g.p2)
-    print(hist) #从上至下，对应日期从近到远，同‘601318.csv’顺序
+    hist = attribute_history(g.security, g.p2) #从上至下，对应日期从近到远，同‘601318.csv’顺序
     ma5 = hist['close'][:g.p1].mean()
     ma60 = hist['close'][:g.p2].mean()
 
