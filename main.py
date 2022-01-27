@@ -6,6 +6,7 @@ import tushare as ts
 import dateutil
 import datetime
 import rqdatac as rq
+from dateutil.parser import parse
 from rqdatac import *
 
 
@@ -17,8 +18,8 @@ rq.init('15821345316', '19890915sxy')
 
 pro = ts.pro_api('7978c1192b900af6a5a83a9df017d364bc76db64ddda2f2548e7d3c0')
 trade_cal = pd.read_csv('trade_cal.csv')
-df = pro.daily(ts_code='601318.SH', start_date='1990-12-26', end_date='2021-01-22')
-df.to_csv('601318.csv')
+# df = pro.daily(ts_code='601318.SH', start_date='1990-12-26', end_date='2021-01-22')
+# df.to_csv('601318.csv')
 
 
 CASH = 100000
@@ -52,7 +53,7 @@ def set_benchmark(security):
 
 def attribute_history(security, count, fields=('open', 'close', 'high', 'low', 'vol')):
     end_date = (context.dt - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
-    start_date = trade_cal[trade_cal['calendarDate'] <= end_date][-count:].iloc[0, :]['calendarDate']
+    start_date = trade_cal[trade_cal['calendarDate'] <= end_date][-count:].iloc[0, 1] #从上至下，对应日期从远到近，同‘trade_cal.csv’顺序
     return attribute_daterange_history(security, start_date, end_date, fields)
 
 
@@ -157,9 +158,8 @@ def run():
             value += p * context.positions[stock]
         plt_df.loc[dt, 'value'] = value
     plt_df['ratio'] = (plt_df['value'] - init_value) / init_value
-
     bm_df = attribute_daterange_history(context.benchmark, context.start_date, context.end_date)
-    bm_init = bm_df['open'][0]
+    bm_init = bm_df['open'][-1]
     plt_df['benchmark_ratio'] = (bm_df['open'] - bm_init) / bm_init
     plt_df[['ratio', 'benchmark_ratio']].plot()
     plt.show()
@@ -175,18 +175,9 @@ def initialize(context):
 
 def handle_data(context):
     hist = attribute_history(g.security, g.p2)
-
+    print(hist) #从上至下，对应日期从近到远，同‘601318.csv’顺序
     ma5 = hist['close'][:g.p1].mean()
-    ma60 = hist['close'].mean()
-
-    print('last 5 days:\n')
-    print(hist['close'][:g.p1])
-    print('last 60 days:\n')
-    print(hist['close'])
-    print('date:' + str(context.dt))
-    print('ma5=' + str(ma5))
-    print('ma60=' + str(ma60))
-    print('------------------')
+    ma60 = hist['close'][:g.p2].mean()
 
     if ma5 > ma60 and g.security not in context.positions:
         order_value(g.security, context.cash)
